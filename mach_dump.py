@@ -5,23 +5,27 @@ In the example below breakpoint will be set at 0x00007fff9063173c and each time
 the breakpoint will be hit message in $rsi will be parsed and saved onto disk.
 Messages are saved under dump/ directory and OOL descriptors into ool/:
 
-  (gdb) source dump_mach_on_bp.py
-  (gdb) python dump_mach_on_bp("*0x00007fff9063173c", "$rsi")
+  (gdb) source mach_dump.py
+  (gdb) python mach_dump("*0x00007fff9063173c", "$rsi")
   (gdb) set pagination off
   (gdb) c
 
-NOTE: default version of gdb bundled with OS X doesn't have Python support, so
-you have to compile your own version (and self sign it) in order to be able to
-use this script.
+Remember that the default version of gdb bundled with OS X doesn't have Python
+support, so you have to compile your own version (and self sign it) in order to
+be able to use this script.
+
+If you are getting invalid address errors then you are breakpointing at the
+wrong place since message is invalid. You want to breakpoint right after the
+target app received the Mach message.
 """
 import gdb
 from struct import unpack_from, calcsize
 from ctypes import *
 
-class dump_mach_on_bp(gdb.Breakpoint):
+class mach_dump(gdb.Breakpoint):
 
     def __init__(self, spec, reg):
-      super(dump_mach_on_bp, self).__init__(
+      super(mach_dump, self).__init__(
           spec, gdb.BP_BREAKPOINT, internal=False)
       self._reg = reg
 
@@ -64,7 +68,7 @@ def parse_data(data, len, inferior):
       print "descriptor size: %d\n" % (desc_size)
       addr, dealloc, copy, pad, desc_type, size = unpack_from(desc_fmt,
           data, offset)
-      print "addr: %s  dealloc: %d copy: %d type: 0x%x  size: %d(0x%x)" %
+      print "addr: %s  dealloc: %d copy: %d type: 0x%x  size: %d(0x%x)" % \
           (hex(addr), dealloc, copy, desc_type, size, size)
       if desc_type == 1 and addr != 0:
         dump_ptr(addr, size, filename, inferior)
